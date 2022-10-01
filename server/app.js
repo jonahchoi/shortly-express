@@ -4,29 +4,42 @@ const utils = require('./lib/hashUtils');
 const partials = require('express-partials');
 const Auth = require('./middleware/auth');
 const models = require('./models');
-
+const  parseCookies = require('./middleware/cookieParser.js');
+const sessions = require('./middleware/auth.js');
+const morgan = require('morgan');
 const app = express();
 
 app.set('views', `${__dirname}/views`);
 app.set('view engine', 'ejs');
 app.use(partials());
+app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use(parseCookies);
+app.use(sessions.createSession);
+
 app.use(express.static(path.join(__dirname, '../public')));
 
 
+app.get('/',
+(req, res) => {
+  sessions.verifySession(req.cookies)
+    .then((isLoggedIn) => {
+      if(!isLoggedIn) {
+        res.redirect('/login');
+      } else if(isLoggedIn) {
+        res.render('index');
+      }
+    })
+});
 
-app.get('/', 
+app.get('/create',
 (req, res) => {
   res.render('index');
 });
 
-app.get('/create', 
-(req, res) => {
-  res.render('index');
-});
-
-app.get('/links', 
+app.get('/links',
 (req, res, next) => {
   models.Links.getAll()
     .then(links => {
@@ -37,7 +50,7 @@ app.get('/links',
     });
 });
 
-app.post('/links', 
+app.post('/links',
 (req, res, next) => {
   var url = req.body.url;
   if (!models.Links.isValidUrl(url)) {
@@ -77,7 +90,48 @@ app.post('/links',
 // Write your authentication routes here
 /************************************************************/
 
+app.get('/signup',
+(req, res) => {
+  res.render('signup');
+})
 
+app.post('/signup',
+(req, res) => {
+  //create user
+  models.Users.create(req.body)
+    .then((data) => {
+      //assign userId to session
+      models.Sessions.update({id: req.cookies.sessionId}, {userId: data.insertId});
+      res.redirect('/')
+    })
+    .catch((err) => {
+      console.error(err);
+      res.redirect('/signup');
+    });
+})
+
+app.get('/login',
+(req, res) => {
+  res.render('login');
+})
+
+app.post('/login',
+(req, res) => {
+  //Select from users,
+  models.Users.get({ username: req.body.username})
+    .then((user) => {
+      if(models.Users.compare(req.body.password, user.password, user.salt)) {
+        //redirect to  home
+        models.Sessions.update({id: req.cookies.sessionId}, {userId: user.id});
+        res.redirect('/');
+      } else {
+        //show failed login
+        res.redirect('/login');
+      };
+    })
+    .catch((err) => res.redirect('/login'));
+  //use Compare to compare given password and hashed
+})
 
 /************************************************************/
 // Handle the code parameter route last - if all other routes fail
