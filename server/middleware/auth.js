@@ -3,27 +3,50 @@ const Promise = require('bluebird');
 const Sessions = models.Sessions;
 
 module.exports.createSession = (req, res, next) => {
+  req.session = {};
+
   if(req.cookies?.sessionId) {
     module.exports.verifySession(req.cookies)
       .then((isLoggedIn) => {
         if(isLoggedIn === null) {
-          makeOneSess(res, next);
+          makeOneSess(req, res, next);
         } else {
-          next();
+          models.Sessions.get({id: req.cookies.sessionId})
+            .then((sess) => {
+              req.session.hash = sess.hash;
+              return models.Users.get({id: sess.userId})
+            })
+            .then((user) => {
+              req.session.user.username = user.username;
+              req.session.userId = user.id;
+              next();
+            })
+            .catch((err) => {
+              console.error(err);
+              next()
+            })
         }
       })
   } else {
-    makeOneSess(res, () => next());
+    makeOneSess(req, res, next);
   }
 };
 
-let makeOneSess = (res, callback) => {
+let makeOneSess = (req, res, callback) => {
   Sessions.create()
     .then((newSess) => {
       res.cookie('sessionId', `${newSess.insertId}`);
-      callback();
+      models.Sessions.get({id: newSess.insertId})
+        .then((sess) => {
+          req.session.hash = sess.hash;
+          callback();
+        })
+        .catch((err) => {
+          console.error(err);
+          callback();
+        })
     })
-    .catch((err) => console.log('hi'));
+    .catch((err) => {console.log(err); callback();});
 }
 /************************************************************/
 // Add additional authentication middleware functions below

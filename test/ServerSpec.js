@@ -277,7 +277,7 @@ describe('', function() {
     });
   });
 
-  xdescribe('Sessions Schema:', function() {
+  describe('Sessions Schema:', function() {
     it('contains a sessions table', function(done) {
       var queryString = 'SELECT * FROM sessions';
       db.query(queryString, function(err, results) {
@@ -325,7 +325,7 @@ describe('', function() {
     });
   });
 
-  xdescribe('Express Middleware', function() {
+  describe('Express Middleware', function() {
     var cookieParser = require('../server/middleware/cookieParser.js');
     var createSession = require('../server/middleware/auth.js').createSession;
 
@@ -335,12 +335,12 @@ describe('', function() {
         var requestWithoutCookies = httpMocks.createRequest();
         var requestWithCookies = httpMocks.createRequest({
           headers: {
-            Cookie: 'shortlyid=8a864482005bcc8b968f2b18f8f7ea490e577b20'
+            Cookie: 'sessionId=8a864482005bcc8b968f2b18f8f7ea490e577b20'
           }
         });
         var requestWithMultipleCookies = httpMocks.createRequest({
           headers: {
-            Cookie: 'shortlyid=18ea4fb6ab3178092ce936c591ddbb90c99c9f66; otherCookie=2a990382005bcc8b968f2b18f8f7ea490e990e78; anotherCookie=8a864482005bcc8b968f2b18f8f7ea490e577b20'
+            Cookie: 'sessionId=18ea4fb6ab3178092ce936c591ddbb90c99c9f66; otherCookie=2a990382005bcc8b968f2b18f8f7ea490e990e78; anotherCookie=8a864482005bcc8b968f2b18f8f7ea490e577b20'
           }
         });
 
@@ -355,14 +355,14 @@ describe('', function() {
         cookieParser(requestWithCookies, response, function() {
           var cookies = requestWithCookies.cookies;
           expect(cookies).to.be.an('object');
-          expect(cookies).to.eql({ shortlyid: '8a864482005bcc8b968f2b18f8f7ea490e577b20' });
+          expect(cookies).to.eql({ sessionId: '8a864482005bcc8b968f2b18f8f7ea490e577b20' });
         });
 
         cookieParser(requestWithMultipleCookies, response, function() {
           var cookies = requestWithMultipleCookies.cookies;
           expect(cookies).to.be.an('object');
           expect(cookies).to.eql({
-            shortlyid: '18ea4fb6ab3178092ce936c591ddbb90c99c9f66',
+            sessionId: '18ea4fb6ab3178092ce936c591ddbb90c99c9f66',
             otherCookie: '2a990382005bcc8b968f2b18f8f7ea490e990e78',
             anotherCookie: '8a864482005bcc8b968f2b18f8f7ea490e577b20'
           });
@@ -391,8 +391,8 @@ describe('', function() {
 
         createSession(requestWithoutCookie, response, function() {
           var cookies = response.cookies;
-          expect(cookies['shortlyid']).to.exist;
-          expect(cookies['shortlyid'].value).to.exist;
+          expect(cookies['sessionId']).to.exist;
+          expect(cookies['sessionId'].value).to.exist;
           done();
         });
       });
@@ -403,10 +403,10 @@ describe('', function() {
         var response = httpMocks.createResponse();
 
         createSession(requestWithoutCookie, response, function() {
-          var cookie = response.cookies.shortlyid.value;
+          var cookie = response.cookies.sessionId.value;
           var secondResponse = httpMocks.createResponse();
           var requestWithCookies = httpMocks.createRequest();
-          requestWithCookies.cookies.shortlyid = cookie;
+          requestWithCookies.cookies.sessionId = cookie;
 
           createSession(requestWithCookies, secondResponse, function() {
             var session = requestWithCookies.session;
@@ -450,10 +450,11 @@ describe('', function() {
 
               var secondResponse = httpMocks.createResponse();
               var requestWithCookies = httpMocks.createRequest();
-              requestWithCookies.cookies.shortlyid = hash;
+              requestWithCookies.cookies.sessionid = 1;
 
               createSession(requestWithCookies, secondResponse, function() {
                 var session = requestWithCookies.session;
+                console.log('session', session);
                 expect(session).to.be.an('object');
                 expect(session.user.username).to.eq(username);
                 expect(session.userId).to.eq(userId);
@@ -468,10 +469,10 @@ describe('', function() {
         var maliciousCookieHash = '8a864482005bcc8b968f2b18f8f7ea490e577b20';
         var response = httpMocks.createResponse();
         var requestWithMaliciousCookie = httpMocks.createRequest();
-        requestWithMaliciousCookie.cookies.shortlyid = maliciousCookieHash;
+        requestWithMaliciousCookie.cookies.sessionId = maliciousCookieHash;
 
         createSession(requestWithMaliciousCookie, response, function() {
-          var cookie = response.cookies.shortlyid;
+          var cookie = response.cookies.sessionId;
           expect(cookie).to.exist;
           expect(cookie).to.not.equal(maliciousCookieHash);
           done();

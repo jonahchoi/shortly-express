@@ -101,7 +101,7 @@ app.post('/signup',
   models.Users.create(req.body)
     .then((data) => {
       //assign userId to session
-      models.Sessions.update({id: req.cookies.sessionId}, {userId: data.insertId});
+      models.Sessions.update({id: req.cookies?.sessionId}, {userId: data.insertId});
       res.redirect('/')
     })
     .catch((err) => {
@@ -122,7 +122,7 @@ app.post('/login',
     .then((user) => {
       if(models.Users.compare(req.body.password, user.password, user.salt)) {
         //redirect to  home
-        models.Sessions.update({id: req.cookies.sessionId}, {userId: user.id});
+        models.Sessions.update({id: req.cookies?.sessionId}, {userId: user.id});
         res.redirect('/');
       } else {
         //show failed login
